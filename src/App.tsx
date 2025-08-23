@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter } from 'react-router-dom';
-import MainLayout from './layouts/MainLayout';
+import MainLayout from './layouts/Layout';
 import { SplashScreen } from './components/common/CommonComp';
 
 const App: React.FC = () => {
