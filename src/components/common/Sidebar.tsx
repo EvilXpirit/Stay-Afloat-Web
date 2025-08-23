@@ -1,10 +1,8 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Leaf, X } from 'lucide-react';
+import { Leaf, LogOut, X } from 'lucide-react';
 import type { User, NavItem } from '../../types/types';
 import { navItems, drawerItems } from '../../config/navigation';
-
-
 
 interface SidebarProps {
   user: User | null;

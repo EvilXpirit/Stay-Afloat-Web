@@ -1,6 +1,6 @@
 import React from 'react';
 import type { User, NavItem } from '../types/types';
-import { Home, MessageSquare, BookOpen, Leaf, User as UserIcon, Settings, Info, LogOut, Menu, X, Smile, Meh, AlertCircle, Sparkles, Frown } from 'lucide-react';
+import { Home, MessageSquare, BookOpen, Leaf, User as UserIcon, Settings, Info, LogOut, Menu, X, Smile, Meh, AlertCircle, Sparkles, Frown, LibraryBig } from 'lucide-react';
 import { Mood, MessageSender } from '../types/types';
 
 
@@ -8,6 +8,7 @@ export const navItems: NavItem[] = [
   { path: '/', name: 'Home', icon: Home },
   { path: '/journal', name: 'Journal', icon: BookOpen },
   { path: '/meditate', name: 'Meditate', icon: Leaf },
+  { path: '/library', name: 'Library', icon: LibraryBig },
   { path: '/chat', name: 'Chat', icon: MessageSquare },
 ];
 
