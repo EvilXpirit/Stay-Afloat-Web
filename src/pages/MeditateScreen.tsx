@@ -19,6 +19,8 @@ import type { BreathingPattern } from "../types/meditation";
 // NEW: Import the hook and form component
 import { useBreathingPatterns } from "../hooks/useBreathingPatterns";
 import { CustomPatternForm } from "../components/meditation/CustomPatternForm";
+import { audioService } from "../services/AudioService";
+import { getSoundUrl } from "../services/freesoundService";
 
 // --- MOCK DATA and TYPES ---
 interface BreathingPatternUpdated extends BreathingPattern {
@@ -165,6 +167,9 @@ const MeditateScreen: React.FC = () => {
             setSelectedPattern(null);
             animationControls.stop();
             hapticFeedback("success"); // Success feedback on completion
+
+            // NEW: Fade out and stop audio on completion
+            audioService.fadeOutAndStop("meditation-ambience", 1500);
             return;
           }
           setCurrentSet((prev) => prev + 1);
@@ -196,7 +201,7 @@ const MeditateScreen: React.FC = () => {
     setSessionState("ready");
   };
 
-  const handleStartSession = () => {
+  const handleStartSession = async () => {
     if (!selectedPattern) return;
     setCurrentSet(1);
     setCurrentStepIndex(0);
@@ -205,14 +210,37 @@ const MeditateScreen: React.FC = () => {
     setSessionState("active");
     setIsPlaying(true); // This will trigger the useEffect to start the timers
     hapticFeedback("success");
+
+    try {
+      // Example sound ID for relaxing rain. Find any you like on Freesound.org!
+      const ambientSoundId = "519460";
+      const soundUrl = await getSoundUrl(ambientSoundId);
+      if (soundUrl) {
+        audioService.play("meditation-ambience", soundUrl, {
+          loop: true,
+          volume: 0.3, // Start at a low, comfortable volume
+        });
+      }
+    } catch (error) {
+      console.error("Could not play ambient audio:", error);
+    }
   };
 
-  const handleTogglePlayPause = () => {
+const handleTogglePlayPause = () => {
     setIsPlaying((prev) => {
       if (prev) {
+        // This block runs when the user is PAUSING the session
         animationControls.stop(); // Pause animation
+        audioService.pause('meditation-ambience'); // NEW: Pause the ambient audio
       } else {
+        // This block runs when the user is RESUMING the session
         runAnimation(); // Resume animation
+        
+        // The service's play method handles resuming a paused track
+        const existingAudio = audioService["audioContext"].get("meditation-ambience");
+        if (existingAudio) {
+          audioService.play("meditation-ambience", existingAudio.src, { loop: true });
+        }
       }
       return !prev;
     });
@@ -228,6 +256,8 @@ const MeditateScreen: React.FC = () => {
     setIsPlaying(false);
     setSelectedPattern(null);
     setSessionState("selecting");
+    // NEW: Fade out and stop the ambient audio
+    audioService.fadeOutAndStop("meditation-ambience", 1500); // 1.5 second fade
   };
 
   const handleSetsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
