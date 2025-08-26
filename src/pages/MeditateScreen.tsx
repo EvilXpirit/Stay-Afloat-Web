@@ -2,59 +2,29 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { AnimatePresence, motion, useAnimationControls } from "framer-motion";
-import { Plus, Play, Pause, RotateCcw, CheckCircle,  X } from "lucide-react";
+// NEW: Import Edit and Trash icons
+import {
+  Plus,
+  Play,
+  Pause,
+  RotateCcw,
+  X,
+  CheckCircle,
+  Edit,
+  Trash2,
+} from "lucide-react";
 import { BreathingCircle } from "../components/meditation/BreathingCircle";
 import { Card } from "../components/common/Card";
 import type { BreathingPattern } from "../types/meditation";
+// NEW: Import the hook and form component
+import { useBreathingPatterns } from "../hooks/useBreathingPatterns";
+import { CustomPatternForm } from "../components/meditation/CustomPatternForm";
 
 // --- MOCK DATA and TYPES ---
 interface BreathingPatternUpdated extends BreathingPattern {
   defaultSets: number;
+  isCustom?: boolean;
 }
-
-const defaultPatterns: BreathingPatternUpdated[] = [
-  {
-    id: "box-breathing",
-    name: "Box Breathing",
-    description:
-      "Equal duration for inhale, hold, exhale, and hold. Great for reducing stress.",
-    steps: [
-      { phase: "inhale", duration: 4 },
-      { phase: "hold", duration: 4 },
-      { phase: "exhale", duration: 4 },
-      { phase: "hold-empty", duration: 4 },
-    ],
-    totalDuration: 16,
-    defaultSets: 10,
-  },
-  {
-    id: "4-7-8",
-    name: "4-7-8 Breathing",
-    description:
-      "Inhale for 4, hold for 7, exhale for 8. Helps with sleep and anxiety.",
-    steps: [
-      { phase: "inhale", duration: 4 },
-      { phase: "hold", duration: 7 },
-      { phase: "exhale", duration: 8 },
-    ],
-    totalDuration: 19,
-    defaultSets: 8,
-  },
-  // --- NEW PATTERN ADDED HERE ---
-  {
-    id: "equal-breathing",
-    name: "Equal Breathing",
-    description:
-      "Breathe in for 4 seconds, and out for 4 seconds. A simple way to find calm.",
-    steps: [
-      { phase: "inhale", duration: 4 },
-      { phase: "exhale", duration: 4 },
-    ],
-    totalDuration: 8,
-    defaultSets: 15,
-  },
-  // --- END OF NEW PATTERN ---
-];
 
 // --- HELPER FUNCTIONS ---
 const formatTime = (seconds: number) => {
@@ -80,7 +50,15 @@ const hapticFeedback = (type: "light" | "success") => {
 // --- THE MAIN COMPONENT ---
 const MeditateScreen: React.FC = () => {
   // State for controlling which view is shown: 'selecting', 'ready', 'active'
-  const [sessionState, setSessionState] = useState<'selecting' | 'ready' | 'active' | 'finished'>('selecting');
+  const { patterns, addPattern, updatePattern, deletePattern } =
+    useBreathingPatterns();
+  // NEW: State for the modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [patternToEdit, setPatternToEdit] =
+    useState<BreathingPatternUpdated | null>(null);
+  const [sessionState, setSessionState] = useState<
+    "selecting" | "ready" | "active" | "finished"
+  >("selecting");
 
   // State for the meditation session itself
   const [selectedPattern, setSelectedPattern] =
@@ -131,6 +109,27 @@ const MeditateScreen: React.FC = () => {
       transition: { duration, ease: "easeInOut" },
     });
   }, [animationControls, currentStep]);
+
+  // --- NEW/UPDATED HANDLERS ---
+  const handleOpenCreateModal = () => {
+    setPatternToEdit(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (pattern: BreathingPatternUpdated) => {
+    setPatternToEdit(pattern);
+    setIsModalOpen(true);
+  };
+
+  const handleSavePattern = (
+    patternData: Omit<BreathingPatternUpdated, "id" | "isCustom">
+  ) => {
+    if (patternToEdit) {
+      updatePattern({ ...patternData, id: patternToEdit.id, isCustom: true });
+    } else {
+      addPattern(patternData);
+    }
+  };
 
   // --- CORE SESSION LOGIC in useEffect ---
   useEffect(() => {
@@ -241,9 +240,12 @@ const MeditateScreen: React.FC = () => {
   // --- RENDER LOGIC ---
   const renderContent = () => {
     // --- NEW: RENDER BLOCK FOR THE 'FINISHED' STATE ---
-    if (sessionState === 'finished' && selectedPattern) {
+    if (sessionState === "finished" && selectedPattern) {
       return (
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+        >
           <Card className="w-full max-w-md p-6 sm:p-8 text-center flex flex-col items-center">
             <CheckCircle className="w-16 h-16 text-teal-500 mb-4" />
             <h2 className="text-2xl font-bold mb-2">Great Work!</h2>
@@ -261,33 +263,68 @@ const MeditateScreen: React.FC = () => {
       );
     }
 
-    if (sessionState === 'active' && selectedPattern && currentStep) {
-      const instructionText = { inhale: 'Breathe In', hold: 'Hold', exhale: 'Breathe Out', 'hold-empty': 'Hold' };
+    if (sessionState === "active" && selectedPattern && currentStep) {
+      const instructionText = {
+        inhale: "Breathe In",
+        hold: "Hold",
+        exhale: "Breathe Out",
+        "hold-empty": "Hold",
+      };
       return (
         <div className="flex flex-col items-center justify-center h-full space-y-8">
           <Card className="w-full max-w-md relative p-6 sm:p-8 text-center">
-             <div className="absolute top-4 right-4 text-slate-500 bg-slate-100 px-3 py-1 rounded-full text-sm font-medium"> {formatTime(totalTimeRemaining)} </div>
-             <button onClick={handleExit} className="absolute top-3 left-3 text-slate-400 hover:text-slate-600"> <X size={24} /> </button>
-            <h2 className="text-xl sm:text-2xl font-semibold mt-4"> {selectedPattern.name} </h2>
-            <p className="text-slate-500 mb-6">Set {currentSet} of {numSets}</p>
+            <div className="absolute top-4 right-4 text-slate-500 bg-slate-100 px-3 py-1 rounded-full text-sm font-medium">
+              {" "}
+              {formatTime(totalTimeRemaining)}{" "}
+            </div>
+            <button
+              onClick={handleExit}
+              className="absolute top-3 left-3 text-slate-400 hover:text-slate-600"
+            >
+              {" "}
+              <X size={24} />{" "}
+            </button>
+            <h2 className="text-xl sm:text-2xl font-semibold mt-4">
+              {" "}
+              {selectedPattern.name}{" "}
+            </h2>
+            <p className="text-slate-500 mb-6">
+              Set {currentSet} of {numSets}
+            </p>
             <div className="flex flex-col items-center justify-center w-full min-h-[250px] gap-y-4">
               <AnimatePresence mode="wait">
-                <motion.div key={currentStep.phase} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.5 }} className="text-2xl sm:text-3xl font-light text-teal-700 h-10" >
+                <motion.div
+                  key={currentStep.phase}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  transition={{ duration: 0.5 }}
+                  className="text-2xl sm:text-3xl font-light text-teal-700 h-10"
+                >
                   {instructionText[currentStep.phase]}
                 </motion.div>
               </AnimatePresence>
               <div className="relative flex items-center justify-center">
-                 <BreathingCircle controls={animationControls} />
-                 <div className="absolute pointer-events-none">
-                    <span className="text-5xl sm:text-6xl font-light text-teal-600"> {stepCountdown} </span>
-                 </div>
+                <BreathingCircle controls={animationControls} />
+                <div className="absolute pointer-events-none">
+                  <span className="text-5xl sm:text-6xl font-light text-teal-600">
+                    {" "}
+                    {stepCountdown}{" "}
+                  </span>
+                </div>
               </div>
             </div>
-             <div className="flex justify-center gap-4 mt-6">
-              <button onClick={handleTogglePlayPause} className="p-4 rounded-full bg-teal-500 text-white shadow-lg hover:bg-teal-600 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2" >
+            <div className="flex justify-center gap-4 mt-6">
+              <button
+                onClick={handleTogglePlayPause}
+                className="p-4 rounded-full bg-teal-500 text-white shadow-lg hover:bg-teal-600 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2"
+              >
                 {isPlaying ? <Pause size={28} /> : <Play size={28} />}
               </button>
-              <button onClick={handleRestart} className="p-4 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2" >
+              <button
+                onClick={handleRestart}
+                className="p-4 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+              >
                 <RotateCcw size={28} />
               </button>
             </div>
@@ -340,18 +377,19 @@ const MeditateScreen: React.FC = () => {
     }
 
     return (
-      // SELECTION VIEW
+      //selection view
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-slate-800">Guided Breathing</h1>
         <div className="grid gap-4 sm:grid-cols-2">
-          {defaultPatterns.map((pattern) => (
+          {patterns.map((pattern) => (
             <motion.div
               key={pattern.id}
               whileHover={{ y: -5 }}
               whileTap={{ scale: 0.98 }}
+              className="relative" // For positioning edit/delete buttons
               onClick={() => handleSelectPattern(pattern)}
             >
-              <Card className="cursor-pointer h-full hover:shadow-xl transition-shadow">
+              <Card className="cursor-pointer h-full hover:shadow-xl transition-shadow flex flex-col">
                 <h3 className="text-lg font-semibold mb-2">{pattern.name}</h3>
                 <p className="text-sm text-slate-600 flex-grow">
                   {pattern.description}
@@ -360,9 +398,38 @@ const MeditateScreen: React.FC = () => {
                   1 Set = {pattern.totalDuration} seconds
                 </div>
               </Card>
+              {/* NEW: Edit and Delete buttons for custom patterns */}
+              {pattern.isCustom && (
+                <div className="absolute top-2 right-2 flex gap-1">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenEditModal(pattern);
+                    }}
+                    className="p-1.5 bg-white/70 backdrop-blur-sm rounded-full text-slate-600 hover:bg-slate-200 hover:text-slate-800"
+                    aria-label="Edit pattern"
+                  >
+                    <Edit size={16} />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deletePattern(pattern.id);
+                    }}
+                    className="p-1.5 bg-white/70 backdrop-blur-sm rounded-full text-red-500 hover:bg-red-100"
+                    aria-label="Delete pattern"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              )}
             </motion.div>
           ))}
-          <motion.div whileHover={{ y: -5 }} whileTap={{ scale: 0.98 }}>
+          <motion.div
+            whileHover={{ y: -5 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleOpenCreateModal}
+          >
             <Card className="cursor-pointer border-2 border-dashed h-full border-slate-200 hover:border-teal-500 flex items-center justify-center">
               <div className="text-center text-slate-500">
                 <Plus className="w-8 h-8 mx-auto mb-2" />
@@ -378,6 +445,13 @@ const MeditateScreen: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 min-h-screen flex flex-col items-center justify-center">
       <div className="w-full max-w-2xl mx-auto">{renderContent()}</div>
+      {/* NEW: Render the modal */}
+      <CustomPatternForm
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSavePattern}
+        patternToEdit={patternToEdit}
+      />
     </div>
   );
 };
