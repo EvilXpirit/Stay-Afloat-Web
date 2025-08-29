@@ -16,13 +16,12 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         // Any request to a path starting with /zenquotes will be proxied
-        "/zenquotes": {
-          target: "https://zenquotes.io",
-          changeOrigin: true,
-          // Rewrite the path to remove the '/zenquotes' prefix
-          // so '/zenquotes/api/quotes' becomes '/api/quotes'
-          rewrite: (path) => path.replace(new RegExp(`^${env.VITE_API_PROXY_PATH}`), ''),
-        },
+      '/api': {
+        target: 'https://zenquotes.io',
+        changeOrigin: true, // This is required for the proxy to work
+        // We don't need a rewrite because your app calls /api/quotes
+        // and the target server also expects /api/quotes.
+      },
       },
     },
   };

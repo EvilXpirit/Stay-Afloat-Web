@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core';
+
 // Define the structure of a quote in our app
 interface Quote {
   id: string;
@@ -23,22 +25,27 @@ class QuoteService {
   private async fetchQuotesFromApi(): Promise<Quote[]> {
     console.log("Fetching new quotes...");
 
-    // Determine the correct base URL based on the environment
-    // In dev (npm run dev), use the proxy path.
-    // In prod (npm run build), use the full absolute URL.
-    const baseUrl = import.meta.env.DEV 
-      ? import.meta.env.VITE_QUOTE_API_PROXY_PATH 
-      : import.meta.env.VITE_QUOTE_API_BASE_URL;
+    // Determine the correct URL based on the platform
+    let apiUrl: string;
 
-    // The rest of the path is the same
-    const apiUrl = `${baseUrl}/api/quotes`;
+    if (Capacitor.isNativePlatform()) {
+      // We are on a real device (iOS/Android).
+      // We MUST use the full, absolute URL to our deployed Vercel function.
+      const baseUrl = import.meta.env.VITE_API_BASE_URL;
+      apiUrl = `${baseUrl}/api/quotes`;
+    } else {
+      // We are in a web browser (local dev or deployed on Vercel).
+      // Use the relative path to take advantage of the proxy/serverless function.
+      apiUrl = import.meta.env.VITE_QUOTES_API_ENDPOINT; // This is "/api/quotes"
+    }
 
-    console.log(`Making request to: ${apiUrl}`);
+    console.log(`Platform: ${Capacitor.isNativePlatform() ? 'Native' : 'Web'}. Making request to: ${apiUrl}`);
 
     try {
       const response = await fetch(apiUrl); 
 
       if (!response.ok) {
+        // ... (rest of the function is exactly the same)
         const errorText = await response.text();
         console.error(`API request failed with status ${response.status}:`, errorText);
         throw new Error(`API request failed with status ${response.status}`);
@@ -58,6 +65,8 @@ class QuoteService {
       return [];
     }
   }
+
+
   private getCachedQuotes(): QuoteCache | null {
     const cachedData = localStorage.getItem(CACHE_KEY);
     if (!cachedData) return null;
