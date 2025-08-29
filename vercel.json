@@ -1,16 +1,14 @@
 {
+  "rewrites": [
+    { "source": "/api/quotes", "destination": "/api/quotes.js" },
+    { "source": "/api/ping", "destination": "/api/ping.js" }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" }
       ]
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/api/quotes",
-      "destination": "/api/quotes.js"
     }
   ]
 }
